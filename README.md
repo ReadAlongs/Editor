@@ -7,4 +7,3 @@ edited.
 
 For the moment it does not quite work, nor does the UI behave as you'd
 expect, but at least it allows you to look at the alignments!
-x
