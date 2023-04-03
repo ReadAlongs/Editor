@@ -1,5 +1,5 @@
 import WaveSurfer from "wavesurfer.js";
-import RegionsPlugin from "wavesurfer.js/src/plugin/regions";
+import RegionsPlugin from "./regions";
 
 // Will be removed by webpack
 require("purecss");
@@ -21,9 +21,7 @@ class App {
         RegionsPlugin.create({
           contentEditable: true,
           removeButton: true,
-          // @types/wavesurfer.js is BROKEN! OMG!
-          // @ts-ignore
-          formatTimeCallback: (start, end) =>
+          formatTimeCallback: (start: number, end: number) =>
             `${start.toFixed(2)}:${end.toFixed(2)}`,
         }),
       ],
