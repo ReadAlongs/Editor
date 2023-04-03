@@ -1,0 +1,49 @@
+{
+  "name": "readalong-editor",
+  "version": "0.0.1",
+  "description": "Simple editor for ReadAlong alignments",
+  "scripts": {
+    "prepare": "husky install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ReadAlongs/Editor.git"
+  },
+  "keywords": [
+    "speech",
+    "audio",
+    "text"
+  ],
+  "author": "David Huggins-Daines <dhd@ecolingui.ca>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ReadAlongs/Editor/issues"
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "homepage": "https://github.com/ReadAlongs/Editor#readme",
+  "devDependencies": {
+    "@commitlint/config-conventional": "^17.4.4",
+    "@types/wavesurfer.js": "^6.0.3",
+    "commitlint": "^17.5.1",
+    "css-loader": "^6.7.3",
+    "html-webpack-plugin": "^5.5.0",
+    "husky": "^8.0.3",
+    "mini-css-extract-plugin": "^2.7.5",
+    "mocha": "^10.2.0",
+    "prettier": "^2.8.7",
+    "pretty-quick": "^3.1.3",
+    "ts-loader": "^9.4.2",
+    "typescript": "^5.0.3",
+    "webpack": "^5.77.0",
+    "webpack-cli": "^5.0.1",
+    "webpack-dev-server": "^4.13.2"
+  },
+  "dependencies": {
+    "purecss": "^3.0.0",
+    "wavesurfer.js": "^6.6.2"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "outDir": "./docs/",
+    "sourceMap": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitThis": true,
+    "module": "esnext",
+    "target": "esnext",
+    "allowJs": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true
+  }
+}
