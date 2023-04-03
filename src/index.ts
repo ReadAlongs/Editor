@@ -18,7 +18,14 @@ class App {
     this.wavesurfer = WaveSurfer.create({
       container: "#wavesurfer",
       plugins: [
-        RegionsPlugin.create({ contentEditable: true, removeButton: true }),
+        RegionsPlugin.create({
+          contentEditable: true,
+          removeButton: true,
+          // @types/wavesurfer.js is BROKEN! OMG!
+          // @ts-ignore
+          formatTimeCallback: (start, end) =>
+            `${start.toFixed(2)}:${end.toFixed(2)}`,
+        }),
       ],
       scrollParent: true,
       height: 200,
