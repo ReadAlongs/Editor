@@ -17,7 +17,9 @@ class App {
     this.ras_input = document.getElementById("ras-input") as HTMLInputElement;
     this.wavesurfer = WaveSurfer.create({
       container: "#wavesurfer",
-      plugins: [RegionsPlugin.create({})],
+      plugins: [
+        RegionsPlugin.create({ contentEditable: true, removeButton: true }),
+      ],
       scrollParent: true,
       height: 200,
       minPxPerSec: 300, // FIXME: uncertain about this
@@ -40,7 +42,7 @@ class App {
       const startTime = parseFloat(startText);
       const endTime = startTime + parseFloat(durText);
       this.wavesurfer.addRegion({
-        attributes: { label: wordText.trim() },
+        data: { text: wordText.trim() },
         start: startTime,
         end: endTime,
       });
