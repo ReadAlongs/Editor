@@ -487,9 +487,7 @@ export class Region {
             let adjustment = 0;
 
             // Get the currently selected time according to the mouse position
-            let time = this.regionsUtil.getRegionSnapToGridValue(
-                this.wavesurfer.drawer.handleEvent(event) * duration
-            );
+            let time = this.wavesurfer.drawer.handleEvent(event) * duration;
 
             if (drag) {
                 // Considering the point of contact with the region while edgescrolling
@@ -614,9 +612,8 @@ export class Region {
             }
 
             // Store the selected startTime we begun dragging or resizing
-            startTime = this.regionsUtil.getRegionSnapToGridValue(
-                this.wavesurfer.drawer.handleEvent(event, true) * duration
-            );
+            startTime =
+                this.wavesurfer.drawer.handleEvent(event, true) * duration;
 
             // Store the selected point of contact when we begin dragging
             regionLeftHalfTime = startTime - this.start;
@@ -684,9 +681,7 @@ export class Region {
             }
 
             const oldTime = startTime;
-            let time = this.regionsUtil.getRegionSnapToGridValue(
-                this.wavesurfer.drawer.handleEvent(event) * duration
-            );
+            let time = this.wavesurfer.drawer.handleEvent(event) * duration;
 
             if (drag) {
                 // To maintain relative cursor start point while dragging

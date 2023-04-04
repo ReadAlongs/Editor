@@ -2,18 +2,12 @@
  *  @since 4.0.0 This class has been split
  *
  * @typedef {Object} RegionsPluginParams
- * @property {?boolean} dragSelection Enable creating regions by dragging with
- * the mouse
  * @property {?boolean} contentEditable=false Allow/disallow editing content of the region
  * @property {?boolean} removeButton=false adds remove region button
  * @property {?RegionParams[]} regions Regions that should be added upon
  * initialisation
  * @property {number} slop=2 The sensitivity of the mouse dragging
- * @property {?number} snapToGridInterval Snap the regions to a grid of the specified multiples in seconds
- * @property {?number} snapToGridOffset Shift the snap-to-grid by the specified seconds. May also be negative.
  * @property {?boolean} deferInit Set to true to manually call
- * @property {number} maxRegions Maximum number of regions that may be created by the user at one time.
- * `initPlugin('regions')`
  * @property {function} formatTimeCallback Allows custom formating for region tooltip.
  * @property {?number} edgeScrollWidth='5% from container edges' Optional width for edgeScroll to start
  */
@@ -93,17 +87,6 @@ export default class RegionsPlugin {
                 clearRegions() {
                     this.regions && this.regions.clear();
                 },
-
-                enableDragSelection(options) {
-                    if (!this.initialisedPluginList.regions) {
-                        this.initPlugin("regions");
-                    }
-                    this.regions.enableDragSelection(options);
-                },
-
-                disableDragSelection() {
-                    this.regions.disableDragSelection();
-                },
             },
             instance: RegionsPlugin,
         };
@@ -112,13 +95,7 @@ export default class RegionsPlugin {
     constructor(params, ws) {
         this.params = params;
         this.wavesurfer = ws;
-        this.util = {
-            ...ws.util,
-            getRegionSnapToGridValue: (value) => {
-                return this.getRegionSnapToGridValue(value, params);
-            },
-        };
-        this.maxRegions = params.maxRegions;
+        this.util = ws.util;
         this.regionsMinLength = params.regionsMinLength || null;
 
         // turn the plugin instance into an observer
@@ -150,9 +127,6 @@ export default class RegionsPlugin {
         this._onReady = () => {
             this.wrapper = this.wavesurfer.drawer.wrapper;
             this.vertical = this.wavesurfer.drawer.params.vertical;
-            if (this.params.dragSelection) {
-                this.enableDragSelection(this.params);
-            }
             Object.keys(this.list).forEach((id) => {
                 this.list[id].updateRender();
             });
@@ -178,19 +152,7 @@ export default class RegionsPlugin {
         // on user input. This can cause confusion since teardown is not a
         // user event, but would emit `region-removed` as if it was.
         this.wavesurfer.setDisabledEventEmissions(["region-removed"]);
-        this.disableDragSelection();
         this.clear();
-    }
-
-    /**
-     * check to see if adding a new region would exceed maxRegions
-     * @return {boolean} whether we should proceed and create a region
-     * @private
-     */
-    wouldExceedMaxRegions() {
-        return (
-            this.maxRegions && Object.keys(this.list).length >= this.maxRegions
-        );
     }
 
     /**
@@ -200,10 +162,6 @@ export default class RegionsPlugin {
      * @return {Region} The created region
      */
     add(params) {
-        if (this.wouldExceedMaxRegions()) {
-            return null;
-        }
-
         params = {
             edgeScrollWidth:
                 this.params.edgeScrollWidth || this.defaultEdgeScrollWidth,
@@ -248,209 +206,6 @@ export default class RegionsPlugin {
         });
     }
 
-    enableDragSelection(params) {
-        this.disableDragSelection();
-
-        const slop = params.slop || 2;
-        const container = this.wavesurfer.drawer.container;
-        const scroll =
-            params.scroll !== false && this.wavesurfer.params.scrollParent;
-        const scrollSpeed = params.scrollSpeed || 1;
-        const scrollThreshold = params.scrollThreshold || 10;
-        let drag;
-        let duration = this.wavesurfer.getDuration();
-        let maxScroll;
-        let start;
-        let region;
-        let touchId;
-        let pxMove = 0;
-        let scrollDirection;
-        let wrapperRect;
-
-        // Scroll when the user is dragging within the threshold
-        const edgeScroll = (e) => {
-            if (!region || !scrollDirection) {
-                return;
-            }
-
-            // Update scroll position
-            let scrollLeft =
-                this.wrapper.scrollLeft + scrollSpeed * scrollDirection;
-            this.wrapper.scrollLeft = scrollLeft = Math.min(
-                maxScroll,
-                Math.max(0, scrollLeft)
-            );
-
-            // Update range
-            const end = this.wavesurfer.drawer.handleEvent(e);
-            region.update({
-                start: Math.min(end * duration, start * duration),
-                end: Math.max(end * duration, start * duration),
-            });
-
-            // Check that there is more to scroll and repeat
-            if (scrollLeft < maxScroll && scrollLeft > 0) {
-                window.requestAnimationFrame(() => {
-                    edgeScroll(e);
-                });
-            }
-        };
-
-        const eventDown = (e) => {
-            if (e.touches && e.touches.length > 1) {
-                return;
-            }
-            duration = this.wavesurfer.getDuration();
-            touchId = e.targetTouches ? e.targetTouches[0].identifier : null;
-
-            // Store for scroll calculations
-            maxScroll = this.wrapper.scrollWidth - this.wrapper.clientWidth;
-            wrapperRect = this.util.withOrientation(
-                this.wrapper.getBoundingClientRect(),
-                this.vertical
-            );
-
-            // set the region channel index based on the clicked area
-            if (
-                this.wavesurfer.params.splitChannels &&
-                this.wavesurfer.params.splitChannelsOptions.splitDragSelection
-            ) {
-                const y =
-                    (e.touches ? e.touches[0].clientY : e.clientY) -
-                    wrapperRect.top;
-                const channelCount =
-                    this.wavesurfer.backend.buffer != null
-                        ? this.wavesurfer.backend.buffer.numberOfChannels
-                        : 1;
-                const channelHeight = this.wrapper.clientHeight / channelCount;
-                const channelIdx = Math.floor(y / channelHeight);
-                params.channelIdx = channelIdx;
-                const channelColors =
-                    this.wavesurfer.params.splitChannelsOptions.channelColors[
-                        channelIdx
-                    ];
-                if (channelColors && channelColors.dragColor) {
-                    params.color = channelColors.dragColor;
-                }
-            }
-
-            drag = true;
-            start = this.wavesurfer.drawer.handleEvent(e, true);
-            region = null;
-            scrollDirection = null;
-        };
-        this.wrapper.addEventListener("mousedown", eventDown);
-        this.wrapper.addEventListener("touchstart", eventDown);
-        this.on("disable-drag-selection", () => {
-            this.wrapper.removeEventListener("touchstart", eventDown);
-            this.wrapper.removeEventListener("mousedown", eventDown);
-        });
-
-        const eventUp = (e) => {
-            if (e.touches && e.touches.length > 1) {
-                return;
-            }
-
-            drag = false;
-            pxMove = 0;
-            scrollDirection = null;
-
-            if (region) {
-                this.util.preventClick();
-                region.fireEvent("update-end", e);
-                this.wavesurfer.fireEvent("region-update-end", region, e);
-            }
-
-            region = null;
-        };
-        this.wrapper.addEventListener("mouseleave", eventUp);
-        this.wrapper.addEventListener("mouseup", eventUp);
-        this.wrapper.addEventListener("touchend", eventUp);
-
-        document.body.addEventListener("mouseup", eventUp);
-        document.body.addEventListener("touchend", eventUp);
-        this.on("disable-drag-selection", () => {
-            document.body.removeEventListener("mouseup", eventUp);
-            document.body.removeEventListener("touchend", eventUp);
-            this.wrapper.removeEventListener("touchend", eventUp);
-            this.wrapper.removeEventListener("mouseup", eventUp);
-            this.wrapper.removeEventListener("mouseleave", eventUp);
-        });
-
-        const eventMove = (event) => {
-            if (!drag) {
-                return;
-            }
-            if (++pxMove <= slop) {
-                return;
-            }
-
-            if (event.touches && event.touches.length > 1) {
-                return;
-            }
-            if (
-                event.targetTouches &&
-                event.targetTouches[0].identifier != touchId
-            ) {
-                return;
-            }
-
-            // auto-create a region during mouse drag, unless region-count would exceed "maxRegions"
-            if (!region) {
-                region = this.add(params || {});
-                if (!region) {
-                    return;
-                }
-            }
-
-            const end = this.wavesurfer.drawer.handleEvent(event);
-            const startUpdate =
-                this.wavesurfer.regions.util.getRegionSnapToGridValue(
-                    start * duration
-                );
-            const endUpdate =
-                this.wavesurfer.regions.util.getRegionSnapToGridValue(
-                    end * duration
-                );
-            region.update({
-                start: Math.min(endUpdate, startUpdate),
-                end: Math.max(endUpdate, startUpdate),
-            });
-
-            let orientedEvent = this.util.withOrientation(event, this.vertical);
-
-            // If scrolling is enabled
-            if (scroll && container.clientWidth < this.wrapper.scrollWidth) {
-                // Check threshold based on mouse
-                const x = orientedEvent.clientX - wrapperRect.left;
-                if (x <= scrollThreshold) {
-                    scrollDirection = -1;
-                } else if (x >= wrapperRect.right - scrollThreshold) {
-                    scrollDirection = 1;
-                } else {
-                    scrollDirection = null;
-                }
-                scrollDirection && edgeScroll(event);
-            }
-        };
-        this.wrapper.addEventListener("mousemove", eventMove);
-        this.wrapper.addEventListener("touchmove", eventMove);
-        this.on("disable-drag-selection", () => {
-            this.wrapper.removeEventListener("touchmove", eventMove);
-            this.wrapper.removeEventListener("mousemove", eventMove);
-        });
-
-        this.wavesurfer.on("region-created", (region) => {
-            if (this.regionsMinLength) {
-                region.minLength = this.regionsMinLength;
-            }
-        });
-    }
-
-    disableDragSelection() {
-        this.fireEvent("disable-drag-selection");
-    }
-
     /**
      * Get current region
      *
@@ -472,31 +227,5 @@ export default class RegionsPlugin {
         });
 
         return min;
-    }
-
-    /**
-     * Match the value to the grid, if required
-     *
-     * If the regions plugin params have a snapToGridInterval set, return the
-     * value matching the nearest grid interval. If no snapToGridInterval is set,
-     * the passed value will be returned without modification.
-     *
-     * @param {number} value the value to snap to the grid, if needed
-     * @param {Object} params the regions plugin params
-     * @returns {number} value
-     */
-    getRegionSnapToGridValue(value, params) {
-        if (params.snapToGridInterval) {
-            // the regions should snap to a grid
-            const offset = params.snapToGridOffset || 0;
-            return (
-                Math.round((value - offset) / params.snapToGridInterval) *
-                    params.snapToGridInterval +
-                offset
-            );
-        }
-
-        // no snap-to-grid
-        return value;
     }
 }
