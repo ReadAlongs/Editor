@@ -11,7 +11,6 @@ declare module "wavesurfer.js" {
     interface WaveSurfer {
         addRegion(regionParams: RegionParams): void;
         clearRegions(): void;
-        enableDragSelection(options: RegionParams): void;
     }
 }
 
@@ -26,8 +25,6 @@ export default class RegionsPlugin
 
     add(params: RegionParams): Region;
     clear(): void;
-    disableDragSelection(): void;
-    enableDragSelection(options: RegionParams): void;
     getCurrentRegion(): Region | null;
     getRegionSnapToGridValue(value: number, params: RegionParams): number;
 
@@ -41,22 +38,20 @@ export default class RegionsPlugin
 }
 
 export interface RegionsPluginParams extends PluginParams {
-    /** Enable creating regions by dragging with the mouse. */
-    dragSelection?: boolean | undefined;
     /** Regions that should be added upon initialisation. */
-    regions?: RegionParams[] | undefined;
+    regions?: RegionParams[];
     /** The sensitivity of the mouse dragging (default: 2). */
-    slop?: number | undefined;
+    slop?: number;
     /** Snap the regions to a grid of the specified multiples in seconds? */
-    snapToGridInterval?: number | undefined;
+    snapToGridInterval?: number;
     /** Shift the snap-to-grid by the specified seconds. May also be negative. */
-    snapToGridOffset?: number | undefined;
+    snapToGridOffset?: number;
     /** Maximum number of regions that may be created by the user at one time. */
-    maxRegions?: number | undefined;
+    maxRegions?: number;
     /** Allows custom formating for region tooltip. */
-    formatTimeCallback?: ((start: number, end: number) => string) | undefined;
+    formatTimeCallback?: (start: number, end: number) => string;
     /** from container edges' Optional width for edgeScroll to start (default: 5% of viewport width). */
-    edgeScrollWidth?: number | undefined;
+    edgeScrollWidth?: number;
 }
 
 export class Region extends Observer {
@@ -66,7 +61,7 @@ export class Region extends Observer {
         ws: WaveSurfer
     );
 
-    bindRagEvents(): void;
+    bindDragEvents(): void;
     bindEvents(): void;
     bindInOut(): void;
     formatTime(start: number, end: number): string;
@@ -85,15 +80,12 @@ export class Region extends Observer {
     readonly attributes: Attributes;
     readonly color: string;
     readonly data: Datas;
-    readonly drag: boolean;
-    readonly edgeScrollWidth?: number | undefined;
+    readonly edgeScrollWidth?: number;
     readonly element: HTMLElement;
     readonly end: number;
     readonly firedIn: boolean;
     readonly firedOut: boolean;
-    readonly formatTimeCallback?:
-        | ((start: number, end: number) => string)
-        | undefined;
+    readonly formatTimeCallback?: (start: number, end: number) => string;
     readonly handleLeftEl: HTMLElement | null;
     readonly handleRightEl: HTMLElement | null;
     readonly handleStyle: HandleStyle;
@@ -107,7 +99,6 @@ export class Region extends Observer {
     readonly preventContextMenu: boolean;
     readonly regionHeight: string;
     readonly regionsUtil: WaveSurfer["util"];
-    readonly resize: boolean;
     readonly scroll: boolean;
     readonly scrollSpeed: number;
     readonly scrollThreshold: number;
@@ -119,24 +110,24 @@ export class Region extends Observer {
 }
 
 export interface RegionParams {
-    id?: string | undefined;
-    start?: number | undefined;
-    end?: number | undefined;
-    loop?: boolean | undefined;
-    drag?: boolean | undefined;
-    resize?: boolean | undefined;
-    color?: string | undefined;
-    channelIdx?: number | undefined;
-    handleStyle?: HandleStyle | undefined;
-    preventContextMenu?: boolean | undefined;
-    showTooltip?: boolean | undefined;
-    attributes?: Attributes | undefined;
-    data?: Datas | undefined;
+    id?: string;
+    start?: number;
+    end?: number;
+    loop?: boolean;
+    color?: string;
+    channelIdx?: number;
+    handleStyle?: HandleStyle;
+    preventContextMenu?: boolean;
+    showTooltip?: boolean;
+    attributes?: Attributes;
+    data?: Datas;
 }
 
 export interface RegionUpdatedEventParams {
-    direction: "right" | "left" | null;
-    action: "drag" | "resize";
+    action: "resize" | "contentEdited";
+    direction?: "right" | "left" | null;
+    oldText?: string;
+    text?: string;
 }
 
 export interface HandleStyle {
