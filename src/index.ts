@@ -42,6 +42,8 @@ class App {
     load_audiofile(audio_file: File | Blob) {
         this.wavesurfer.loadBlob(audio_file);
         this.wavesurfer.clearRegions();
+        // Clear previously selected readalong
+        this.ras_input.value = "";
     }
 
     async load_readalong(ras_file: File) {
@@ -54,14 +56,19 @@ class App {
         const xml = parser.parseFromString(text, "text/html");
         const readalong = xml.querySelector("read-along");
         if (readalong === null) return;
+        // Oh, there's an audio file, okay, try to load it
         const audio = readalong.getAttribute("audio");
         if (audio !== null) {
             const reply = await fetch(audio);
+            // Did that work? Great!
             if (reply.ok) {
                 const blob = await reply.blob();
                 this.load_audiofile(blob);
+                // Clear previously selected file
+                this.audio_input.value = "";
             }
         }
+        // Is read-along linked (including data URI) or embedded?
         const href = readalong.getAttribute("href");
         if (href === null) this.create_regions(readalong);
         else {
