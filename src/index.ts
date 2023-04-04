@@ -32,8 +32,6 @@ class App {
                 RegionsPlugin.create({
                     contentEditable: true,
                     removeButton: true,
-                    formatTimeCallback: (start: number, end: number) =>
-                        `${start.toFixed(2)}:${end.toFixed(2)}`,
                 }),
             ],
             scrollParent: true,
@@ -111,9 +109,6 @@ class App {
             this.wavesurfer.zoom(this.wavesurfer.params.minPxPerSec / 1.25);
         });
         this.wavesurfer.on("region-click", (region, e) => {
-            console.log(
-                `${region.data.text}: ${region.start} -> ${region.end}`
-            );
             e.stopPropagation();
             region.play();
         });

@@ -8,7 +8,6 @@
  * initialisation
  * @property {number} slop=2 The sensitivity of the mouse dragging
  * @property {?boolean} deferInit Set to true to manually call
- * @property {function} formatTimeCallback Allows custom formating for region tooltip.
  * @property {?number} edgeScrollWidth='5% from container edges' Optional width for edgeScroll to start
  */
 
@@ -167,23 +166,34 @@ export default class RegionsPlugin {
             ...params,
         };
 
-        // Take formatTimeCallback from plugin params if not already set
-        if (!params.formatTimeCallback && this.params.formatTimeCallback) {
-            params = {
-                ...params,
-                formatTimeCallback: this.params.formatTimeCallback,
-            };
-        }
+        // Round times to milliseconds (this is somewhat bogus, but
+        // allows us to reason sensibly about adjacency below)
+        params.start = Math.round(params.start * 1000) / 1000;
+        params.end = Math.round(params.end * 1000) / 1000;
 
+        // Simulate a linked list
+        let prev;
+        let next;
+        const dur = this.wavesurfer.getDuration();
+        for (const adj of Object.values(this.list)) {
+            if (adj.end === params.start) prev = adj.id;
+            if (adj.start === params.end) next = adj.id;
+        }
         const region = new this.wavesurfer.Region(
             params,
             this.util,
-            this.wavesurfer
+            this.wavesurfer,
+            prev,
+            next
         );
 
         this.list[region.id] = region;
+        if (prev) this.list[prev].next = region.id;
+        if (next) this.list[next].prev = region.id;
 
         region.on("remove", () => {
+            if (region.prev) delete this.list[region.prev].next;
+            if (region.next) delete this.list[region.next].prev;
             delete this.list[region.id];
         });
 

@@ -9,13 +9,15 @@
  * @extends {Observer}
  */
 export class Region {
-    constructor(params, regionsUtils, ws) {
+    constructor(params, regionsUtils, ws, prev, next) {
         this.wavesurfer = ws;
         this.wrapper = ws.drawer.wrapper;
         this.util = ws.util;
         this.style = this.util.style;
         this.regionsUtil = regionsUtils;
         this.vertical = ws.drawer.params.vertical;
+        this.prev = prev;
+        this.next = next;
 
         this.id = params.id == null ? ws.util.getId() : params.id;
         this.start = Number(params.start) || 0;
@@ -73,7 +75,6 @@ export class Region {
             }
         }
 
-        this.formatTimeCallback = params.formatTimeCallback;
         this.edgeScrollWidth = params.edgeScrollWidth;
         this.bindInOut();
         this.render();
@@ -261,17 +262,8 @@ export class Region {
     }
 
     formatTime(start, end) {
-        if (this.formatTimeCallback) {
-            return this.formatTimeCallback(start, end);
-        }
-        return (start == end ? [start] : [start, end])
-            .map((time) =>
-                [
-                    Math.floor((time % 3600) / 60), // minutes
-                    ("00" + Math.floor(time % 60)).slice(-2), // seconds
-                ].join(":")
-            )
-            .join("-");
+        // They are in milliseconds
+        return `${start.toFixed(3)}-${end.toFixed(3)}`;
     }
 
     getWidth() {
@@ -430,6 +422,52 @@ export class Region {
         let scrollDirection;
         let wrapperRect;
 
+        // Determine allowable resize and effect on adjacent region
+        const adjustTime = (event) => {
+            const duration = this.wavesurfer.getDuration();
+            let time = this.wavesurfer.drawer.handleEvent(event) * duration;
+
+            // First clamp it to the absolute limits of the waveform
+            time = Math.max(time, 0);
+            time = Math.min(time, duration);
+
+            // If this region is linked, adjust the linked region.
+            // Disallow overlapping accordingly (either the current
+            // region or the adjacent one)
+            let adj;
+            let overlap_src = this;
+            if (resize == "end") {
+                time = Math.max(this.start, time);
+                if (this.next) {
+                    adj = this.wavesurfer.regions.list[this.next];
+                    overlap_src = adj;
+                    time = Math.min(adj.end, time);
+                }
+                for (const region of Object.values(
+                    this.wavesurfer.regions.list
+                )) {
+                    if (region === overlap_src) continue;
+                    if (overlap_src.start < region.start && time > region.start)
+                        time = region.start;
+                }
+            } else if (resize == "start") {
+                time = Math.min(this.end, time);
+                if (this.prev) {
+                    adj = this.wavesurfer.regions.list[this.prev];
+                    overlap_src = adj;
+                    time = Math.max(adj.start, time);
+                }
+                for (const region of Object.values(
+                    this.wavesurfer.regions.list
+                )) {
+                    if (region === overlap_src) continue;
+                    if (overlap_src.end > region.end && time < region.end)
+                        time = region.end;
+                }
+            }
+            return [time, adj];
+        };
+
         // Scroll when the user is dragging within the threshold
         const edgeScroll = (event) => {
             let orientedEvent = this.util.withOrientation(event, this.vertical);
@@ -444,17 +482,7 @@ export class Region {
             let adjustment = 0;
 
             // Get the currently selected time according to the mouse position
-            let time = this.wavesurfer.drawer.handleEvent(event) * duration;
-
-            if (resize === "start") {
-                if (time < 0) {
-                    time = 0;
-                }
-            } else if (resize === "end") {
-                if (time > duration) {
-                    time = duration;
-                }
-            }
+            let [time, adj] = adjustTime(event);
 
             // Don't edgescroll if region has reached min or max limit
             const wrapperScrollLeft = this.wrapper.scrollLeft;
@@ -516,6 +544,7 @@ export class Region {
 
             // Continue dragging or resizing
             this.onResize(delta, resize);
+            if (adj) adj.onResize(delta, resize == "start" ? "end" : "start");
 
             // Repeat
             window.requestAnimationFrame(() => {
@@ -600,33 +629,9 @@ export class Region {
             // We only care about moves when resizing
             if (!resize) return;
 
-            // Decide whether we will actually resize or not
-            let time = this.wavesurfer.drawer.handleEvent(event) * duration;
-
-            // First clamp it to the absolute limits of the waveform
-            time = Math.max(time, 0);
-            time = Math.min(time, duration);
-
-            // Also disallow moving start past end or vice versa
-            if (resize == "end") time = Math.max(this.start, time);
-            if (resize == "start") time = Math.min(this.end, time);
-
-            // Also disallow overlapping regions
-            for (const region of Object.values(this.wavesurfer.regions.list)) {
-                if (region === this) continue;
-                if (
-                    resize == "end" &&
-                    this.start < region.start &&
-                    time > region.start
-                )
-                    time = region.start;
-                if (
-                    resize == "start" &&
-                    this.end > region.end &&
-                    time < region.end
-                )
-                    time = region.end;
-            }
+            // Decide whether we will actually resize or not, and if
+            // we should also adjust an adjacent region.
+            let [time, adj] = adjustTime(event);
 
             const delta = time - startTime;
             startTime = time;
@@ -635,8 +640,9 @@ export class Region {
             // if there is a change to report
             updated = updated || delta !== 0;
             this.onResize(delta, resize);
+            if (adj) adj.onResize(delta, resize == "start" ? "end" : "start");
 
-            // Complicated edge-scrolling logic, leave it alone
+            // Complicated edge-scrolling logic
             if (
                 this.scroll &&
                 container.clientWidth < this.wrapper.scrollWidth
