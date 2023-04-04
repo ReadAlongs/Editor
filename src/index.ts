@@ -9,12 +9,16 @@ class App {
   wavesurfer: WaveSurfer;
   audio_input: HTMLInputElement;
   ras_input: HTMLInputElement;
+  zoom_in: HTMLButtonElement;
+  zoom_out: HTMLButtonElement;
 
   constructor() {
     this.audio_input = document.getElementById(
       "audio-input"
     ) as HTMLInputElement;
     this.ras_input = document.getElementById("ras-input") as HTMLInputElement;
+    this.zoom_in = document.getElementById("zoom-in") as HTMLButtonElement;
+    this.zoom_out = document.getElementById("zoom-out") as HTMLButtonElement;
     this.wavesurfer = WaveSurfer.create({
       container: "#wavesurfer",
       plugins: [
@@ -63,10 +67,14 @@ class App {
       if (this.ras_input.files != null)
         this.load_readalong(this.ras_input.files[0]);
     });
+    this.zoom_in.addEventListener("click", () => {
+      this.wavesurfer.zoom(this.wavesurfer.params.minPxPerSec * 1.25);
+    });
+    this.zoom_out.addEventListener("click", () => {
+      this.wavesurfer.zoom(this.wavesurfer.params.minPxPerSec / 1.25);
+    });
     this.wavesurfer.on("region-click", (region, e) => {
-      console.log(
-        `${region.attributes.label}: ${region.start} -> ${region.end}`
-      );
+      console.log(`${region.data.text}: ${region.start} -> ${region.end}`);
       e.stopPropagation();
       region.play();
     });
