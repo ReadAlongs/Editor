@@ -1,12 +1,12 @@
 {
     "compilerOptions": {
-        "outDir": "./docs/",
+        "outDir": "./dist/",
         "sourceMap": true,
         "noImplicitAny": true,
         "strictNullChecks": true,
         "noImplicitThis": true,
         "module": "esnext",
-        "target": "esnext",
+        "target": "es2015",
         "allowJs": true,
         "moduleResolution": "node",
         "allowSyntheticDefaultImports": true
