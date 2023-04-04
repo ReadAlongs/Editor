@@ -39,15 +39,43 @@ class App {
         });
     }
 
-    load_audiofile(audio_file: File) {
+    load_audiofile(audio_file: File | Blob) {
         this.wavesurfer.loadBlob(audio_file);
+        this.wavesurfer.clearRegions();
     }
 
     async load_readalong(ras_file: File) {
-        const parser = new DOMParser();
         const text = await ras_file.text();
+        this.parse_readalong(text);
+    }
+
+    async parse_readalong(text: string) {
+        const parser = new DOMParser();
         const xml = parser.parseFromString(text, "text/html");
-        for (const w of Array.from(xml.querySelectorAll("read-along w[id]"))) {
+        const readalong = xml.querySelector("read-along");
+        if (readalong === null) return;
+        const audio = readalong.getAttribute("audio");
+        if (audio !== null) {
+            const reply = await fetch(audio);
+            if (reply.ok) {
+                const blob = await reply.blob();
+                this.load_audiofile(blob);
+            }
+        }
+        const href = readalong.getAttribute("href");
+        if (href === null) this.create_regions(readalong);
+        else {
+            const reply = await fetch(href);
+            if (reply.ok) {
+                const text2 = await reply.text();
+                // FIXME: potential zip-bombing?
+                this.parse_readalong(text2);
+            }
+        }
+    }
+
+    create_regions(readalong: Element) {
+        for (const w of Array.from(readalong.querySelectorAll("w[id]"))) {
             const wordText = w.textContent;
             const startText = w.getAttribute("time");
             const durText = w.getAttribute("dur");
@@ -65,11 +93,11 @@ class App {
 
     initialize() {
         this.audio_input.addEventListener("change", () => {
-            if (this.audio_input.files != null)
+            if (this.audio_input.files && this.audio_input.files[0])
                 this.load_audiofile(this.audio_input.files[0]);
         });
         this.ras_input.addEventListener("change", async () => {
-            if (this.ras_input.files != null)
+            if (this.ras_input.files && this.ras_input.files[0])
                 this.load_readalong(this.ras_input.files[0]);
         });
         this.zoom_in.addEventListener("click", () => {
