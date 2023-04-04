@@ -8,14 +8,6 @@
   border: solid black 1px;
 }
 
-.spectrogram-box {
-  overflow: scroll;
-}
-
-#spectrogram {
-  height: 260px;
-}
-
 .title-bar,
 .status-bar {
   color: white;
