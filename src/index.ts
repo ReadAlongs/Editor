@@ -78,6 +78,7 @@ class App {
     }
 
     create_regions(readalong: Element) {
+        this.wavesurfer.clearRegions();
         for (const w of Array.from(readalong.querySelectorAll("w[id]"))) {
             const wordText = w.textContent;
             const startText = w.getAttribute("time");
