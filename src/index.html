@@ -1,56 +1,60 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>ReadAlong Editor</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta charset="utf-8" />
-  </head>
-  <body>
-    <div class="content-wrapper">
-      <div class="content">
-        <div class="pure-g">
-          <div class="pure-u-1 title-bar">
-            <h1>ReadAlong Editor</h1>
-          </div>
-          <div class="pure-u-1-2">
-            <div class="content-box">
-              <form class="pure-form-stacked">
-                <label
-                  >Upload an audio file:
-                  <input
-                    id="audio-input"
-                    type="file"
-                    value="Upload"
-                    accept=".mp3,.wav,.webm"
-                  />
-                </label>
-              </form>
+    <head>
+        <title>ReadAlong Editor</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta charset="utf-8" />
+    </head>
+    <body>
+        <div class="content-wrapper">
+            <div class="content">
+                <div class="pure-g">
+                    <div class="pure-u-1 title-bar">
+                        <h1>ReadAlong Editor</h1>
+                    </div>
+                    <div class="pure-u-1-2">
+                        <div class="content-box">
+                            <form class="pure-form-stacked">
+                                <label
+                                    >Upload an audio file:
+                                    <input
+                                        id="audio-input"
+                                        type="file"
+                                        value="Upload"
+                                        accept=".mp3,.wav,.webm"
+                                    />
+                                </label>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="pure-u-1-2">
+                        <div class="content-box">
+                            <form class="pure-form-stacked">
+                                <label
+                                    >Upload a ReadAlong file:
+                                    <input
+                                        id="ras-input"
+                                        type="file"
+                                        value="Upload"
+                                        accept=".readalong,.html"
+                                    />
+                                </label>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="pure-u-1" id="wavesurfer"></div>
+                    <div class="pure-u-1" style="text-align: center">
+                        <div class="content-box">
+                            <button class="pure-button" id="zoom-in">
+                                Zoom In
+                            </button>
+                            <button class="pure-button" id="zoom-out">
+                                Zoom Out
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-          <div class="pure-u-1-2">
-            <div class="content-box">
-              <form class="pure-form-stacked">
-                <label
-                  >Upload a ReadAlong file:
-                  <input
-                    id="ras-input"
-                    type="file"
-                    value="Upload"
-                    accept=".readalong,.html"
-                  />
-                </label>
-              </form>
-            </div>
-          </div>
-          <div class="pure-u-1" id="wavesurfer"></div>
-          <div class="pure-u-1" style="text-align: center">
-            <div class="content-box">
-              <button class="pure-button" id="zoom-in">Zoom In</button>
-              <button class="pure-button" id="zoom-out">Zoom Out</button>
-            </div>
-          </div>
         </div>
-      </div>
-    </div>
-  </body>
+    </body>
 </html>
