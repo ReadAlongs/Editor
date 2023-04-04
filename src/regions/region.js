@@ -25,14 +25,10 @@ export class Region {
                   this.start +
                   (4 / this.wrapper.scrollWidth) * this.wavesurfer.getDuration()
                 : Number(params.end);
-        this.resize =
-            params.resize === undefined ? true : Boolean(params.resize);
-        this.drag = params.drag === undefined ? true : Boolean(params.drag);
         this.contentEditable = Boolean(params.contentEditable);
         this.removeButton = Boolean(params.removeButton);
-        // reflect resize and drag state of region for region-updated listener
+        // reflect resize state of region for region-updated listener
         this.isResizing = false;
-        this.isDragging = false;
         this.loop = Boolean(params.loop);
         this.color = params.color || "rgba(0, 0, 0, 0.1)";
         // The left and right handleStyle properties can be set to 'none' for
@@ -109,13 +105,7 @@ export class Region {
         if (params.data != null) {
             this.data = params.data;
         }
-        if (params.resize != null) {
-            this.resize = Boolean(params.resize);
-            this.updateHandlesResize(this.resize);
-        }
-        if (params.drag != null) {
-            this.drag = Boolean(params.drag);
-        }
+        this.updateHandlesResize(true);
         if (params.maxLength != null) {
             this.maxLength = Number(params.maxLength);
         }
@@ -233,52 +223,46 @@ export class Region {
         }
 
         /* Resize handles */
-        if (this.resize) {
-            this.handleLeftEl = this.util.withOrientation(
-                this.element.appendChild(document.createElement("handle")),
-                this.vertical
-            );
-            this.handleRightEl = this.util.withOrientation(
-                this.element.appendChild(document.createElement("handle")),
-                this.vertical
-            );
+        this.handleLeftEl = this.util.withOrientation(
+            this.element.appendChild(document.createElement("handle")),
+            this.vertical
+        );
+        this.handleRightEl = this.util.withOrientation(
+            this.element.appendChild(document.createElement("handle")),
+            this.vertical
+        );
 
-            this.handleLeftEl.className =
-                "wavesurfer-handle wavesurfer-handle-start";
-            this.handleRightEl.className =
-                "wavesurfer-handle wavesurfer-handle-end";
+        this.handleLeftEl.className =
+            "wavesurfer-handle wavesurfer-handle-start";
+        this.handleRightEl.className =
+            "wavesurfer-handle wavesurfer-handle-end";
 
-            // Default CSS properties for both handles.
-            const css = {
-                cursor: this.vertical ? "row-resize" : "col-resize",
-                position: "absolute",
-                top: "0px",
-                width: "2px",
-                height: "100%",
-                backgroundColor: "rgba(0, 0, 0, 1)",
-            };
+        // Default CSS properties for both handles.
+        const css = {
+            cursor: this.vertical ? "row-resize" : "col-resize",
+            position: "absolute",
+            top: "0px",
+            width: "2px",
+            height: "100%",
+            backgroundColor: "rgba(0, 0, 0, 1)",
+        };
 
-            // Merge CSS properties per handle.
-            const handleLeftCss =
-                this.handleStyle.left !== "none"
-                    ? Object.assign({ left: "0px" }, css, this.handleStyle.left)
-                    : null;
-            const handleRightCss =
-                this.handleStyle.right !== "none"
-                    ? Object.assign(
-                          { right: "0px" },
-                          css,
-                          this.handleStyle.right
-                      )
-                    : null;
+        // Merge CSS properties per handle.
+        const handleLeftCss =
+            this.handleStyle.left !== "none"
+                ? Object.assign({ left: "0px" }, css, this.handleStyle.left)
+                : null;
+        const handleRightCss =
+            this.handleStyle.right !== "none"
+                ? Object.assign({ right: "0px" }, css, this.handleStyle.right)
+                : null;
 
-            if (handleLeftCss) {
-                this.style(this.handleLeftEl, handleLeftCss);
-            }
+        if (handleLeftCss) {
+            this.style(this.handleLeftEl, handleLeftCss);
+        }
 
-            if (handleRightCss) {
-                this.style(this.handleRightEl, handleRightCss);
-            }
+        if (handleRightCss) {
+            this.style(this.handleRightEl, handleRightCss);
         }
 
         this.updateRender();
@@ -338,7 +322,7 @@ export class Region {
                 left: left + "px",
                 width: regionWidth + "px",
                 backgroundColor: this.color,
-                cursor: this.drag ? "move" : "default",
+                cursor: "default",
             });
 
             for (const attrname in this.attributes) {
@@ -434,10 +418,8 @@ export class Region {
             this.wavesurfer.fireEvent("region-contextmenu", this, e);
         });
 
-        /* Drag or resize on mousemove. */
-        if (this.drag || this.resize) {
-            this.bindDragEvents();
-        }
+        /* Resize on mousemove. */
+        this.bindDragEvents();
 
         /* Edit content */
         if (this.contentEditable) {
@@ -464,7 +446,6 @@ export class Region {
         const scrollSpeed = this.scrollSpeed;
         let startTime;
         let touchId;
-        let drag;
         let maxScroll;
         let resize;
         let updated = false;
@@ -477,7 +458,7 @@ export class Region {
         const edgeScroll = (event) => {
             let orientedEvent = this.util.withOrientation(event, this.vertical);
             const duration = this.wavesurfer.getDuration();
-            if (!scrollDirection || (!drag && !resize)) {
+            if (!scrollDirection) {
                 return;
             }
 
@@ -489,43 +470,29 @@ export class Region {
             // Get the currently selected time according to the mouse position
             let time = this.wavesurfer.drawer.handleEvent(event) * duration;
 
-            if (drag) {
-                // Considering the point of contact with the region while edgescrolling
-                if (scrollDirection === -1) {
-                    regionHalfTimeWidth =
-                        regionLeftHalfTime * this.wavesurfer.params.minPxPerSec;
-                    distanceBetweenCursorAndWrapperEdge = x - wrapperRect.left;
-                } else {
-                    regionHalfTimeWidth =
-                        regionRightHalfTime *
-                        this.wavesurfer.params.minPxPerSec;
-                    distanceBetweenCursorAndWrapperEdge = wrapperRect.right - x;
-                }
-            } else {
-                // Considering minLength while edgescroll
-                let minLength = this.minLength;
-                if (!minLength) {
-                    minLength = 0;
+            // Considering minLength while edgescroll
+            let minLength = this.minLength;
+            if (!minLength) {
+                minLength = 0;
+            }
+
+            if (resize === "start") {
+                if (time > this.end - minLength) {
+                    time = this.end - minLength;
+                    adjustment = scrollSpeed * scrollDirection;
                 }
 
-                if (resize === "start") {
-                    if (time > this.end - minLength) {
-                        time = this.end - minLength;
-                        adjustment = scrollSpeed * scrollDirection;
-                    }
+                if (time < 0) {
+                    time = 0;
+                }
+            } else if (resize === "end") {
+                if (time < this.start + minLength) {
+                    time = this.start + minLength;
+                    adjustment = scrollSpeed * scrollDirection;
+                }
 
-                    if (time < 0) {
-                        time = 0;
-                    }
-                } else if (resize === "end") {
-                    if (time < this.start + minLength) {
-                        time = this.start + minLength;
-                        adjustment = scrollSpeed * scrollDirection;
-                    }
-
-                    if (time > duration) {
-                        time = duration;
-                    }
+                if (time > duration) {
+                    time = duration;
                 }
             }
 
@@ -588,7 +555,7 @@ export class Region {
             startTime = time;
 
             // Continue dragging or resizing
-            drag ? this.onDrag(delta) : this.onResize(delta, resize);
+            this.onResize(delta, resize);
 
             // Repeat
             window.requestAnimationFrame(() => {
@@ -605,13 +572,10 @@ export class Region {
                 ? event.targetTouches[0].identifier
                 : null;
 
-            // stop the event propagation, if this region is resizable or draggable
-            // and the event is therefore handled here.
-            if (this.drag || this.resize) {
-                event.stopPropagation();
-            }
+            // stop the event propagation as we are handling resize
+            event.stopPropagation();
 
-            // Store the selected startTime we begun dragging or resizing
+            // Store the selected startTime we begun resizing
             startTime =
                 this.wavesurfer.drawer.handleEvent(event, true) * duration;
 
@@ -628,7 +592,6 @@ export class Region {
             );
 
             this.isResizing = false;
-            this.isDragging = false;
             if (event.target.tagName.toLowerCase() === "handle") {
                 this.isResizing = true;
                 resize = event.target.classList.contains(
@@ -636,10 +599,6 @@ export class Region {
                 )
                     ? "start"
                     : "end";
-            } else {
-                this.isDragging = true;
-                drag = true;
-                resize = false;
             }
         };
         const onUp = (event) => {
@@ -647,10 +606,8 @@ export class Region {
                 return;
             }
 
-            if (drag || resize) {
-                this.isDragging = false;
+            if (resize) {
                 this.isResizing = false;
-                drag = false;
                 scrollDirection = null;
                 resize = false;
             }
@@ -676,24 +633,12 @@ export class Region {
             ) {
                 return;
             }
-            if (!drag && !resize) {
+            if (!resize) {
                 return;
             }
 
             const oldTime = startTime;
             let time = this.wavesurfer.drawer.handleEvent(event) * duration;
-
-            if (drag) {
-                // To maintain relative cursor start point while dragging
-                const maxEnd = this.wavesurfer.getDuration();
-                if (time > maxEnd - regionRightHalfTime) {
-                    time = maxEnd - regionRightHalfTime;
-                }
-
-                if (time - regionLeftHalfTime < 0) {
-                    time = regionLeftHalfTime;
-                }
-            }
 
             if (resize) {
                 // To maintain relative cursor start point while resizing
@@ -730,14 +675,8 @@ export class Region {
 
             startTime = time;
 
-            // Drag
-            if (this.drag && drag) {
-                updated = updated || !!delta;
-                this.onDrag(delta);
-            }
-
             // Resize
-            if (this.resize && resize) {
+            if (resize) {
                 updated = updated || !!delta;
                 this.onResize(delta, resize);
             }
@@ -784,48 +723,6 @@ export class Region {
             document.removeEventListener("mouseup", onUp);
             document.body.removeEventListener("touchend", onUp);
         });
-    }
-
-    onDrag(delta) {
-        const maxEnd = this.wavesurfer.getDuration();
-        if (this.end + delta > maxEnd) {
-            delta = maxEnd - this.end;
-        }
-
-        if (this.start + delta < 0) {
-            delta = this.start * -1;
-        }
-
-        const eventParams = {
-            direction: this._getDragDirection(delta),
-            action: "drag",
-        };
-
-        this.update(
-            {
-                start: this.start + delta,
-                end: this.end + delta,
-            },
-            eventParams
-        );
-    }
-
-    /**
-     * Returns the direction of dragging region based on delta
-     * Negative delta means region is moving to the left
-     * Positive - to the right
-     * For zero delta the direction is not defined
-     * @param {number} delta Drag offset
-     * @returns {string|null} Direction 'left', 'right' or null
-     */
-    _getDragDirection(delta) {
-        if (delta < 0) {
-            return "left";
-        }
-        if (delta > 0) {
-            return "right";
-        }
-        return null;
     }
 
     /**

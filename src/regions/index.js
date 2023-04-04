@@ -20,8 +20,6 @@
  * @property {number} start=0 The start position of the region (in seconds).
  * @property {number} end=0 The end position of the region (in seconds).
  * @property {?boolean} loop Whether to loop the region when played back.
- * @property {boolean} drag=true Allow/disallow dragging the region.
- * @property {boolean} resize=true Allow/disallow resizing the region.
  * @property {string} [color='rgba(0, 0, 0, 0.1)'] HTML color code.
  * @property {?number} channelIdx Select channel to draw the region on (if there are multiple channel waveforms).
  * @property {?object} handleStyle A set of CSS properties used to style the left and right handle.
@@ -33,7 +31,7 @@ import { Region } from "./region.js";
 
 /**
  * Regions are visual overlays on waveform that can be used to play and loop
- * portions of audio. Regions can be dragged and resized.
+ * portions of audio. Regions can be resized.
  *
  * Visual customization is possible via CSS (using the selectors
  * `.wavesurfer-region` and `.wavesurfer-handle`).
