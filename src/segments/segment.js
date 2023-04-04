@@ -1,20 +1,10 @@
-/**
- *  @since 4.0.0
- *
- * (Single) Region plugin class
- *
- * Must be turned into an observer before instantiating. This is done in
- * `RegionsPlugin` (main plugin class).
- *
- * @extends {Observer}
- */
-export class Region {
-    constructor(params, regionsUtils, ws, prev, next) {
+export class Segment {
+    constructor(params, segmentsUtils, ws, prev, next) {
         this.wavesurfer = ws;
         this.wrapper = ws.drawer.wrapper;
         this.util = ws.util;
         this.style = this.util.style;
-        this.regionsUtil = regionsUtils;
+        this.segmentsUtil = segmentsUtils;
         this.vertical = ws.drawer.params.vertical;
         this.prev = prev;
         this.next = next;
@@ -23,13 +13,13 @@ export class Region {
         this.start = Number(params.start) || 0;
         this.end =
             params.end == null
-                ? // small marker-like region
+                ? // small marker-like segment
                   this.start +
                   (4 / this.wrapper.scrollWidth) * this.wavesurfer.getDuration()
                 : Number(params.end);
         this.contentEditable = Boolean(params.contentEditable);
         this.removeButton = Boolean(params.removeButton);
-        // reflect resize state of region for region-updated listener
+        // reflect resize state of segment for segment-updated listener
         this.isResizing = false;
         this.loop = Boolean(params.loop);
         this.color = params.color || "rgba(0, 0, 0, 0.1)";
@@ -56,11 +46,11 @@ export class Region {
                 ? false
                 : Boolean(params.preventContextMenu);
 
-        // select channel ID to set region
+        // select channel ID to set segment
         let channelIdx =
             params.channelIdx == null ? -1 : parseInt(params.channelIdx);
         this.channelIdx = channelIdx;
-        this.regionHeight = "100%";
+        this.segmentHeight = "100%";
         this.marginTop = "0px";
 
         if (channelIdx !== -1) {
@@ -69,7 +59,7 @@ export class Region {
                     ? this.wavesurfer.backend.buffer.numberOfChannels
                     : -1;
             if (channelCount >= 0 && channelIdx < channelCount) {
-                this.regionHeight = Math.floor((1 / channelCount) * 100) + "%";
+                this.segmentHeight = Math.floor((1 / channelCount) * 100) + "%";
                 this.marginTop =
                     this.wavesurfer.getHeight() * channelIdx + "px";
             }
@@ -80,10 +70,10 @@ export class Region {
         this.render();
         this.wavesurfer.on("zoom", this._onRedraw);
         this.wavesurfer.on("redraw", this._onRedraw);
-        this.wavesurfer.fireEvent("region-created", this);
+        this.wavesurfer.fireEvent("segment-created", this);
     }
 
-    /* Update region params. */
+    /* Update segment params. */
     update(params, eventParams) {
         if (params.start != null) {
             this.start = Number(params.start);
@@ -110,10 +100,10 @@ export class Region {
 
         this.updateRender();
         this.fireEvent("update");
-        this.wavesurfer.fireEvent("region-updated", this, eventParams);
+        this.wavesurfer.fireEvent("segment-updated", this, eventParams);
     }
 
-    /* Remove a single region. */
+    /* Remove a single segment. */
     remove() {
         if (this.element) {
             this.element.remove();
@@ -121,23 +111,23 @@ export class Region {
             this.fireEvent("remove");
             this.wavesurfer.un("zoom", this._onRedraw);
             this.wavesurfer.un("redraw", this._onRedraw);
-            this.wavesurfer.fireEvent("region-removed", this);
+            this.wavesurfer.fireEvent("segment-removed", this);
         }
     }
 
     /**
-     * Play the audio region.
+     * Play the audio segment.
      * @param {number} start Optional offset to start playing at
      */
     play(start) {
         const s = start || this.start;
         this.wavesurfer.play(s, this.end);
         this.fireEvent("play");
-        this.wavesurfer.fireEvent("region-play", this);
+        this.wavesurfer.fireEvent("segment-play", this);
     }
 
     /**
-     * Play the audio region in a loop.
+     * Play the audio segment in a loop.
      * @param {number} start Optional offset to start playing at
      * */
     playLoop(start) {
@@ -153,14 +143,14 @@ export class Region {
         this.loop = loop;
     }
 
-    /* Render a region as a DOM element. */
+    /* Render a segment as a DOM element. */
     render() {
         this.element = this.util.withOrientation(
-            this.wrapper.appendChild(document.createElement("region")),
+            this.wrapper.appendChild(document.createElement("segment")),
             this.vertical
         );
 
-        this.element.className = "wavesurfer-region";
+        this.element.className = "wavesurfer-segment";
         if (this.showTooltip) {
             this.element.title = this.formatTime(this.start, this.end);
         }
@@ -168,7 +158,7 @@ export class Region {
 
         for (const attrname in this.attributes) {
             this.element.setAttribute(
-                "data-region-" + attrname,
+                "data-segment-" + attrname,
                 this.attributes[attrname]
             );
         }
@@ -176,14 +166,14 @@ export class Region {
         this.style(this.element, {
             position: "absolute",
             zIndex: 3,
-            height: this.regionHeight,
+            height: this.segmentHeight,
             top: this.marginTop,
         });
 
-        /* Button Remove Region */
+        /* Button Remove Segment */
         if (this.removeButton) {
             const removeButtonEl = document.createElement("div");
-            removeButtonEl.className = "remove-region-button";
+            removeButtonEl.className = "remove-segment-button";
             removeButtonEl.textContent = "⨯";
             this.removeButtonEl = this.element.appendChild(removeButtonEl);
             const css = {
@@ -202,7 +192,7 @@ export class Region {
         /* Edit content */
         if (this.contentEditable) {
             const contentEl = document.createElement("div");
-            contentEl.className = "region-content";
+            contentEl.className = "segment-content";
             contentEl.contentEditable = "true";
             contentEl.innerText = this.data.text || "";
             this.contentEl = this.element.appendChild(contentEl);
@@ -283,21 +273,21 @@ export class Region {
         endLimited = Math.max(startLimited, endLimited);
 
         if (this.element != null) {
-            // Calculate the left and width values of the region such that
-            // no gaps appear between regions.
+            // Calculate the left and width values of the segment such that
+            // no gaps appear between segments.
             const left = Math.round((startLimited / dur) * width);
-            const regionWidth = Math.round((endLimited / dur) * width) - left;
+            const segmentWidth = Math.round((endLimited / dur) * width) - left;
 
             this.style(this.element, {
                 left: left + "px",
-                width: regionWidth + "px",
+                width: segmentWidth + "px",
                 backgroundColor: this.color,
                 cursor: "default",
             });
 
             for (const attrname in this.attributes) {
                 this.element.setAttribute(
-                    "data-region-" + attrname,
+                    "data-segment-" + attrname,
                     this.attributes[attrname]
                 );
             }
@@ -326,13 +316,13 @@ export class Region {
                 this.firedOut = true;
                 this.firedIn = false;
                 this.fireEvent("out");
-                this.wavesurfer.fireEvent("region-out", this);
+                this.wavesurfer.fireEvent("segment-out", this);
             }
             if (!this.firedIn && start <= time && end > time) {
                 this.firedIn = true;
                 this.firedOut = false;
                 this.fireEvent("in");
-                this.wavesurfer.fireEvent("region-in", this);
+                this.wavesurfer.fireEvent("segment-in", this);
             }
         };
 
@@ -359,25 +349,25 @@ export class Region {
 
         this.element.addEventListener("mouseenter", (e) => {
             this.fireEvent("mouseenter", e);
-            this.wavesurfer.fireEvent("region-mouseenter", this, e);
+            this.wavesurfer.fireEvent("segment-mouseenter", this, e);
         });
 
         this.element.addEventListener("mouseleave", (e) => {
             this.fireEvent("mouseleave", e);
-            this.wavesurfer.fireEvent("region-mouseleave", this, e);
+            this.wavesurfer.fireEvent("segment-mouseleave", this, e);
         });
 
         this.element.addEventListener("click", (e) => {
             e.preventDefault();
             this.fireEvent("click", e);
-            this.wavesurfer.fireEvent("region-click", this, e);
+            this.wavesurfer.fireEvent("segment-click", this, e);
         });
 
         this.element.addEventListener("dblclick", (e) => {
             e.stopPropagation();
             e.preventDefault();
             this.fireEvent("dblclick", e);
-            this.wavesurfer.fireEvent("region-dblclick", this, e);
+            this.wavesurfer.fireEvent("segment-dblclick", this, e);
         });
 
         this.element.addEventListener("contextmenu", (e) => {
@@ -385,7 +375,7 @@ export class Region {
                 e.preventDefault();
             }
             this.fireEvent("contextmenu", e);
-            this.wavesurfer.fireEvent("region-contextmenu", this, e);
+            this.wavesurfer.fireEvent("segment-contextmenu", this, e);
         });
 
         /* Resize on mousemove. */
@@ -422,7 +412,7 @@ export class Region {
         let scrollDirection;
         let wrapperRect;
 
-        // Determine allowable resize and effect on adjacent region
+        // Determine allowable resize and effect on adjacent segment
         const adjustTime = (event) => {
             const duration = this.wavesurfer.getDuration();
             let time = this.wavesurfer.drawer.handleEvent(event) * duration;
@@ -431,38 +421,41 @@ export class Region {
             time = Math.max(time, 0);
             time = Math.min(time, duration);
 
-            // If this region is linked, adjust the linked region.
+            // If this segment is linked, adjust the linked segment.
             // Disallow overlapping accordingly (either the current
-            // region or the adjacent one)
+            // segment or the adjacent one)
             let adj;
             let overlap_src = this;
             if (resize == "end") {
                 time = Math.max(this.start, time);
                 if (this.next) {
-                    adj = this.wavesurfer.regions.list[this.next];
+                    adj = this.wavesurfer.segments.list[this.next];
                     overlap_src = adj;
                     time = Math.min(adj.end, time);
                 }
-                for (const region of Object.values(
-                    this.wavesurfer.regions.list
+                for (const segment of Object.values(
+                    this.wavesurfer.segments.list
                 )) {
-                    if (region === overlap_src) continue;
-                    if (overlap_src.start < region.start && time > region.start)
-                        time = region.start;
+                    if (segment === overlap_src) continue;
+                    if (
+                        overlap_src.start < segment.start &&
+                        time > segment.start
+                    )
+                        time = segment.start;
                 }
             } else if (resize == "start") {
                 time = Math.min(this.end, time);
                 if (this.prev) {
-                    adj = this.wavesurfer.regions.list[this.prev];
+                    adj = this.wavesurfer.segments.list[this.prev];
                     overlap_src = adj;
                     time = Math.max(adj.start, time);
                 }
-                for (const region of Object.values(
-                    this.wavesurfer.regions.list
+                for (const segment of Object.values(
+                    this.wavesurfer.segments.list
                 )) {
-                    if (region === overlap_src) continue;
-                    if (overlap_src.end > region.end && time < region.end)
-                        time = region.end;
+                    if (segment === overlap_src) continue;
+                    if (overlap_src.end > segment.end && time < segment.end)
+                        time = segment.end;
                 }
             }
             return [time, adj];
@@ -478,13 +471,13 @@ export class Region {
 
             const x = orientedEvent.clientX;
             let distanceBetweenCursorAndWrapperEdge = 0;
-            let regionHalfTimeWidth = 0;
+            let segmentHalfTimeWidth = 0;
             let adjustment = 0;
 
             // Get the currently selected time according to the mouse position
             let [time, adj] = adjustTime(event);
 
-            // Don't edgescroll if region has reached min or max limit
+            // Don't edgescroll if segment has reached min or max limit
             const wrapperScrollLeft = this.wrapper.scrollLeft;
 
             if (scrollDirection === -1) {
@@ -495,7 +488,7 @@ export class Region {
                 if (
                     Math.round(
                         wrapperScrollLeft -
-                            regionHalfTimeWidth +
+                            segmentHalfTimeWidth +
                             distanceBetweenCursorAndWrapperEdge
                     ) <= 0
                 ) {
@@ -509,7 +502,7 @@ export class Region {
                 if (
                     Math.round(
                         wrapperScrollLeft +
-                            regionHalfTimeWidth -
+                            segmentHalfTimeWidth -
                             distanceBetweenCursorAndWrapperEdge
                     ) >= maxScroll
                 ) {
@@ -524,7 +517,7 @@ export class Region {
             if (scrollDirection === -1) {
                 const calculatedLeft = Math.max(
                     0 +
-                        regionHalfTimeWidth -
+                        segmentHalfTimeWidth -
                         distanceBetweenCursorAndWrapperEdge,
                     scrollLeft
                 );
@@ -532,7 +525,7 @@ export class Region {
             } else {
                 const calculatedRight = Math.min(
                     maxScroll -
-                        regionHalfTimeWidth +
+                        segmentHalfTimeWidth +
                         distanceBetweenCursorAndWrapperEdge,
                     scrollLeft
                 );
@@ -602,12 +595,12 @@ export class Region {
                 resize = false;
             }
 
-            // Update this region if necessary
+            // Update this segment if necessary
             if (updated) {
                 updated = false;
                 this.util.preventClick();
                 this.fireEvent("update-end", event);
-                this.wavesurfer.fireEvent("region-update-end", this, event);
+                this.wavesurfer.fireEvent("segment-update-end", this, event);
             }
         };
         const onMove = (event) => {
@@ -630,7 +623,7 @@ export class Region {
             if (!resize) return;
 
             // Decide whether we will actually resize or not, and if
-            // we should also adjust an adjacent region.
+            // we should also adjust an adjacent segment.
             let [time, adj] = adjustTime(event);
 
             const delta = time - startTime;
