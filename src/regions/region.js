@@ -451,8 +451,6 @@ export class Region {
         let updated = false;
         let scrollDirection;
         let wrapperRect;
-        let regionLeftHalfTime;
-        let regionRightHalfTime;
 
         // Scroll when the user is dragging within the threshold
         const edgeScroll = (event) => {
@@ -565,23 +563,22 @@ export class Region {
 
         const onDown = (event) => {
             const duration = this.wavesurfer.getDuration();
+            // Exclude multi-touch events
             if (event.touches && event.touches.length > 1) {
                 return;
             }
+            // Store touch target for comparison
             touchId = event.targetTouches
                 ? event.targetTouches[0].identifier
                 : null;
 
             // stop the event propagation as we are handling resize
+            // (this handler is for handles so it does resize by definition)
             event.stopPropagation();
 
             // Store the selected startTime we begun resizing
             startTime =
                 this.wavesurfer.drawer.handleEvent(event, true) * duration;
-
-            // Store the selected point of contact when we begin dragging
-            regionLeftHalfTime = startTime - this.start;
-            regionRightHalfTime = this.end - startTime;
 
             // Store for scroll calculations
             maxScroll = this.wrapper.scrollWidth - this.wrapper.clientWidth;
@@ -602,16 +599,19 @@ export class Region {
             }
         };
         const onUp = (event) => {
+            // Exclude multi-touches
             if (event.touches && event.touches.length > 1) {
                 return;
             }
 
+            // End a resize in progress
             if (resize) {
                 this.isResizing = false;
                 scrollDirection = null;
                 resize = false;
             }
 
+            // Update this region if necessary
             if (updated) {
                 updated = false;
                 this.util.preventClick();
@@ -624,15 +624,18 @@ export class Region {
             let orientedEvent = this.util.withOrientation(event, this.vertical);
             let delta = null;
 
+            // Exclude multi-touches
             if (event.touches && event.touches.length > 1) {
                 return;
             }
+            // Exclude touches on other targets than the original one
             if (
                 event.targetTouches &&
                 event.targetTouches[0].identifier != touchId
             ) {
                 return;
             }
+            // We only care about moves when resizing
             if (!resize) {
                 return;
             }
