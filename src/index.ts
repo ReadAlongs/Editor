@@ -31,7 +31,6 @@ class App {
             plugins: [
                 RegionsPlugin.create({
                     contentEditable: true,
-                    removeButton: true,
                 }),
             ],
             scrollParent: true,
