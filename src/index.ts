@@ -25,6 +25,9 @@ class App {
         ) as HTMLButtonElement;
         this.wavesurfer = WaveSurfer.create({
             container: "#wavesurfer",
+            progressColor: "#999",
+            waveColor: "#999",
+            cursorColor: "red",
             plugins: [
                 RegionsPlugin.create({
                     contentEditable: true,
