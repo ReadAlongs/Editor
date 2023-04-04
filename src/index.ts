@@ -105,16 +105,41 @@ class App {
         this.adjust_alignment(this.readalong_element);
         const filetype = this.ras_input.files[0].type;
         if (filetype === "text/html") {
+            // This may not be the same as this.readalong_element in the case where it was a data URL
+            const outer_ras = this.readalong.querySelector("read-along");
+            if (outer_ras == null) {
+                this.download_button.disabled = true;
+                throw "failed to find <read-along> element";
+            }
+            if (outer_ras !== this.readalong_element) {
+                // If it was Base-64, re-encode it as Base-64
+                // See https://stackoverflow.com/questions/30106476/using-javascripts-atob-to-decode-base64-doesnt-properly-decode-utf-8-strings
+                const xml = new XMLSerializer().serializeToString(
+                    this.readalong_element
+                );
+                const b64ras = window.btoa(
+                    encodeURIComponent(xml).replace(
+                        /%([0-9A-F]{2})/g,
+                        function (match, p1) {
+                            return String.fromCharCode(parseInt(p1, 16));
+                        }
+                    )
+                );
+                outer_ras.setAttribute(
+                    "href",
+                    "data:application/readalong+xml;base64," + b64ras
+                );
+            }
+            // Otherwise there is nothing to do as we already updated it in adjust_alignment
             const blob = new Blob([this.readalong.documentElement.outerHTML], {
                 type: filetype,
             });
             element.href = window.URL.createObjectURL(blob);
         } else {
-            const ser = new XMLSerializer();
-            const blob = new Blob(
-                [ser.serializeToString(this.readalong_element)],
-                { type: filetype }
+            const xml = new XMLSerializer().serializeToString(
+                this.readalong_element
             );
+            const blob = new Blob([xml], { type: filetype });
             element.href = window.URL.createObjectURL(blob);
         }
         element.download = this.ras_input.files[0].name;
