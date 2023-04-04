@@ -598,54 +598,45 @@ export class Region {
                 return;
             }
             // We only care about moves when resizing
-            if (!resize) {
-                return;
-            }
+            if (!resize) return;
 
-            const oldTime = startTime;
+            // Decide whether we will actually resize or not
             let time = this.wavesurfer.drawer.handleEvent(event) * duration;
 
-            if (resize) {
-                // To maintain relative cursor start point while resizing
-                // we have to handle for minLength
-                let minLength = this.minLength;
-                if (!minLength) {
-                    minLength = 0;
-                }
+            // First clamp it to the absolute limits of the waveform
+            time = Math.max(time, 0);
+            time = Math.min(time, duration);
 
-                if (resize === "start") {
-                    if (time > this.end - minLength) {
-                        time = this.end - minLength;
-                    }
+            // Also disallow moving start past end or vice versa
+            if (resize == "end") time = Math.max(this.start, time);
+            if (resize == "start") time = Math.min(this.end, time);
 
-                    if (time < 0) {
-                        time = 0;
-                    }
-                } else if (resize === "end") {
-                    if (time < this.start + minLength) {
-                        // Calculate the end time based on the min length of the region.
-                        time = this.start + minLength;
-                        delta = time - (this.end + (time - startTime));
-                    }
-
-                    if (time > duration) {
-                        time = duration;
-                    }
-                }
+            // Also disallow overlapping regions
+            for (const region of Object.values(this.wavesurfer.regions.list)) {
+                if (region === this) continue;
+                if (
+                    resize == "end" &&
+                    this.start < region.start &&
+                    time > region.start
+                )
+                    time = region.start;
+                if (
+                    resize == "start" &&
+                    this.end > region.end &&
+                    time < region.end
+                )
+                    time = region.end;
             }
 
-            if (!delta) {
-                delta = time - startTime;
-            }
-
+            const delta = time - startTime;
             startTime = time;
 
-            // Resize
-            if (resize) {
-                updated = updated || !!delta;
-                this.onResize(delta, resize);
-            }
+            // Signal an updated event if we were already updated or
+            // if there is a change to report
+            updated = updated || delta !== 0;
+            this.onResize(delta, resize);
 
+            // Complicated edge-scrolling logic, leave it alone
             if (
                 this.scroll &&
                 container.clientWidth < this.wrapper.scrollWidth
