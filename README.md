@@ -22,8 +22,8 @@ and serialized along the way.
 
 ## License
 
-src/regions/\*: BSD 3-clause
-everything else: MIT
+- src/segments/\*: BSD 3-clause
+- everything else: MIT
 
 ## Author
 
