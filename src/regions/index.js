@@ -94,7 +94,6 @@ export default class RegionsPlugin {
         this.params = params;
         this.wavesurfer = ws;
         this.util = ws.util;
-        this.regionsMinLength = params.regionsMinLength || null;
 
         // turn the plugin instance into an observer
         const observerPrototypeKeys = Object.getOwnPropertyNames(
@@ -174,10 +173,6 @@ export default class RegionsPlugin {
                 ...params,
                 formatTimeCallback: this.params.formatTimeCallback,
             };
-        }
-
-        if (!params.minLength && this.regionsMinLength) {
-            params = { ...params, minLength: this.regionsMinLength };
         }
 
         const region = new this.wavesurfer.Region(

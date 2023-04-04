@@ -31,7 +31,6 @@ export default class RegionsPlugin
     readonly list: { [id: string]: Region };
     readonly maxRegions: number;
     readonly params: RegionsPluginParams;
-    readonly regionsMinLength: number;
     readonly util: WaveSurfer["util"];
     readonly wavesurfer: WaveSurfer;
     readonly wrapper: HTMLElement;
@@ -94,8 +93,6 @@ export class Region extends Observer {
     readonly isResizing: boolean;
     readonly loop: boolean;
     readonly marginTop: string;
-    readonly maxLength: number;
-    readonly minLength: number;
     readonly preventContextMenu: boolean;
     readonly regionHeight: string;
     readonly regionsUtil: WaveSurfer["util"];

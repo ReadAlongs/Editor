@@ -43,9 +43,6 @@ export class Region {
         this.attributes = params.attributes || {};
         this.showTooltip = params.showTooltip ?? true;
 
-        this.maxLength = params.maxLength;
-        // It assumes the minLength parameter value, or the regionsMinLength parameter value, if the first one not provided
-        this.minLength = params.minLength;
         this._onRedraw = () => this.updateRender();
 
         this.scroll = params.scroll !== false && ws.params.scrollParent;
@@ -106,12 +103,6 @@ export class Region {
             this.data = params.data;
         }
         this.updateHandlesResize(true);
-        if (params.maxLength != null) {
-            this.maxLength = Number(params.maxLength);
-        }
-        if (params.minLength != null) {
-            this.minLength = Number(params.minLength);
-        }
         if (params.attributes != null) {
             this.attributes = params.attributes;
         }
@@ -293,24 +284,11 @@ export class Region {
         const dur = this.wavesurfer.getDuration();
         const width = this.getWidth();
 
-        let startLimited = this.start;
-        let endLimited = this.end;
-        if (startLimited < 0) {
-            startLimited = 0;
-            endLimited = endLimited - startLimited;
-        }
-        if (endLimited > dur) {
-            endLimited = dur;
-            startLimited = dur - (endLimited - startLimited);
-        }
-
-        if (this.minLength != null) {
-            endLimited = Math.max(startLimited + this.minLength, endLimited);
-        }
-
-        if (this.maxLength != null) {
-            endLimited = Math.min(startLimited + this.maxLength, endLimited);
-        }
+        // Restrict to endpoints of waveform
+        let startLimited = Math.max(this.start, 0);
+        let endLimited = Math.min(this.end, dur);
+        // end must be >= start
+        endLimited = Math.max(startLimited, endLimited);
 
         if (this.element != null) {
             // Calculate the left and width values of the region such that
@@ -468,27 +446,11 @@ export class Region {
             // Get the currently selected time according to the mouse position
             let time = this.wavesurfer.drawer.handleEvent(event) * duration;
 
-            // Considering minLength while edgescroll
-            let minLength = this.minLength;
-            if (!minLength) {
-                minLength = 0;
-            }
-
             if (resize === "start") {
-                if (time > this.end - minLength) {
-                    time = this.end - minLength;
-                    adjustment = scrollSpeed * scrollDirection;
-                }
-
                 if (time < 0) {
                     time = 0;
                 }
             } else if (resize === "end") {
-                if (time < this.start + minLength) {
-                    time = this.start + minLength;
-                    adjustment = scrollSpeed * scrollDirection;
-                }
-
                 if (time > duration) {
                     time = duration;
                 }
@@ -572,8 +534,7 @@ export class Region {
                 ? event.targetTouches[0].identifier
                 : null;
 
-            // stop the event propagation as we are handling resize
-            // (this handler is for handles so it does resize by definition)
+            // stop the event propagation, we got this
             event.stopPropagation();
 
             // Store the selected startTime we begun resizing
@@ -591,6 +552,7 @@ export class Region {
             this.isResizing = false;
             if (event.target.tagName.toLowerCase() === "handle") {
                 this.isResizing = true;
+                // Which side are we resizing
                 resize = event.target.classList.contains(
                     "wavesurfer-handle-start"
                 )
@@ -620,9 +582,9 @@ export class Region {
             }
         };
         const onMove = (event) => {
+            // Total duration which cannot be exceeded!
             const duration = this.wavesurfer.getDuration();
             let orientedEvent = this.util.withOrientation(event, this.vertical);
-            let delta = null;
 
             // Exclude multi-touches
             if (event.touches && event.touches.length > 1) {
@@ -744,16 +706,6 @@ export class Region {
         };
 
         if (direction === "start") {
-            // Check if changing the start by the given delta would result in the region being smaller than minLength
-            if (delta > 0 && this.end - (this.start + delta) < this.minLength) {
-                delta = this.end - this.minLength - this.start;
-            }
-
-            // Check if changing the start by the given delta would result in the region being larger than maxLength
-            if (delta < 0 && this.end - (this.start + delta) > this.maxLength) {
-                delta = this.end - this.start - this.maxLength;
-            }
-
             if (delta < 0 && this.start + delta < 0) {
                 delta = this.start * -1;
             }
@@ -766,16 +718,6 @@ export class Region {
                 eventParams
             );
         } else {
-            // Check if changing the end by the given delta would result in the region being smaller than minLength
-            if (delta < 0 && this.end + delta - this.start < this.minLength) {
-                delta = this.start + this.minLength - this.end;
-            }
-
-            // Check if changing the end by the given delta would result in the region being larger than maxLength
-            if (delta > 0 && this.end + delta - this.start > this.maxLength) {
-                delta = this.maxLength - (this.end - this.start);
-            }
-
             if (delta > 0 && this.end + delta > duration) {
                 delta = duration - this.end;
             }
